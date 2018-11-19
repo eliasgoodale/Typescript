@@ -3,7 +3,18 @@ import { httpClient } from './httpClient'
 
 const { endpoints } = httpClient
 
-module httpActionGroup {
+
+
+
+const actionKeys = {
+    getAll: 'GET_ALL',
+    getOne: 'GET_ONE',
+    create: 'CREATE',
+}
+
+
+namespace httpActionGroup {
+
     export const getAll = (entity: string) => 
         createAction(`${entity}/GET_ALL`, resolve => {
             return () => resolve(endpoints[entity].getAll())
@@ -25,6 +36,12 @@ module httpActionGroup {
     })
 }
 
+const assignEntityHttpAction = (entity: string, action: string) => {
+    if (httpActionGroup.hasOwnProperty(action) {
+        return httpActionGroup[action] 
+    }
+}
 export {
+    assignHttpAction,
     httpActionGroup
 }

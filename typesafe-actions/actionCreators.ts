@@ -1,4 +1,39 @@
 import { httpActionGroup } from './allActions'
+import { createAction as defaultActionCreator } from 'typesafe-actions'
+type ReduxAppEntity = any;
+type ReduxAppInitialState = any;
+type ReduxAppEntities = any;
+
+interface IVisualComponentInitialState {
+  type: string;
+
+}
+
+interface IActionGroups {
+  index: string[];
+}
+
+interface EntityIdentifier {
+   key: string;
+   id: string | number;
+   title: string;
+}
+
+
+interface StateContainer {
+  createAppEntities(initialState: any): ReduxAppEntities
+}
+/* Set up default ReduxApp behavior (routes for logging/serializing state etc) */
+abstract class ReduxApp implements StateContainer {
+  private _initializedFrom: ReduxAppInitialState
+  public entities: ReduxAppEntities;
+
+  constructor (initialState: ReduxAppInitialState) {
+    this._initializedFrom = initialState;
+  }
+
+  abstract createAppEntities(initialState: any): ReduxAppEntities
+}
 
 class LiquidTraceActionGroup {
 
@@ -13,32 +48,89 @@ class LiquidTraceActionGroup {
     createActionGroup(actionNames: string[], actionGroup: any) {
         const actions: any = {}
         actionNames.forEach(name => {
-            actions[name] = actionGroup[name](this.entityName);
+            actions[name] = createAction(actionGroup[name](this.entityName);
         })
         return actions;
     }
 }
 
-class LiquidTraceApp {
+class LiquidTraceEntity {
+    private _identifiers;
+    public component;
+    public actionGroups;
+    public validation;
+    public collection;
 
+
+    public constructor({ identifiers, component, actionGroups, collection, validation }){
+      this._identifiers = this.processIdentifiers(identifiers) // process later
+      this.component = this.createReactComponent(component);
+      this.actionGroups = this.createActionGroups(actionGroups);
+
+      /*
+        Optionally set up validation and collection if this component requires,
+        typically for container components
+      */
+
+      this.validation = this.setupValidation(validation)
+      this.collection = this.setupCollection(collection) //set up collection
+    }
+
+    processIdentifiers({id, key, title}){
+      /* 
+        Process identifiers and make optional changes to meta data that effects the entire entity.
+        Here, you can manipulate the instantiation process
+      */
+      const identifiers: any = {id: id, key: key, title: title}
+      return identifiers;
+    }
+
+    createReactComponent(initialState: IVisualComponentInitialState) {
+      const component: any = {}
+      switch(initialState.type) {
+        case 'kendo-grid':
+          return component //setupKendoGrid(config)
+        case 'inspector':
+          return component //setupInspector(config)
+        default:
+          return component // empty
+      }
+    }
+
+    createActionGroups(initialState: IActionGroups) {
+      const actionGroups: any = {};
+      const { key } = this._identifiers;
+      initialState.index.forEach(groupName => 
+        actionGroups[groupName] = new LiquidTraceActionGroup(key, initialState[groupName]))
+    }
+
+    setupValidation(initialState: any) {
+      /* set up validations for type of data that we need to operate on set up methods for createCollection */
+      const validation: any = {};
+      return validation;
+    }
+
+    setupCollection(initialState: any) {
+      /* call getAll to get and use the validations to verify data integrity */
+      const collection: any = {};
+      return collection;
+    }
+  }
+
+class LiquidTraceApp extends ReduxApp {
     public entities: any;
 
-    public constructor(entityActions: any) {
-        this.entities = this.createActionGroups(entityActions)  
+    public constructor(initialState: ReduxAppInitialState) {
+        super(initialState);
+        this.entities = this.createAppEntities(initialState);
     }
 
-    createAppEntities() {
-
+    createAppEntities(initialState): ReduxAppEntities {
+      const entities: ReduxAppEntities = {};
+      initialState.index.forEach(entityName => 
+        entities[entityName] = new LiquidTraceEntity(initialState[entityName]));
+      return entities
     }
-
-    createActionGroups(entityActions: any) {
-        const entities: any = {};
-        const entityNames = Object.keys(entityActions);
-        entityNames.forEach(name => 
-            entities[name] = new LiquidTraceActionGroup(name, entityActions[name]));
-        return entities;
-    }
-
 }
 
 
@@ -49,8 +141,47 @@ const entityActions = {
     users: httpActionGroup,
 }
 
+const liquidTraceInitialState: ReduxAppInitialState = {
 
-const app = new LiquidTraceApp(entityActions);
+  entities:{
+    index: ['todos'],
+    todos:{
+      identifiers: {
+        key: 'todos',
+        id: 'todos-Table',
+        title: 'Todos',
+      },
+      component:{
+        type: 'kendo-grid',
+        config:{
+          columns:{
+            key: 'hex-string',
+            field: 'todos',
+          }
+        },
+      },
+      actionGroups: {
+        index: ['http'],
+        http: {},
+      },
+      collection: {
+        fetching: false,
+        fetched: false,
+        data: [],
+      },
+      validation: {
+        fetching: null,
+        fetched: [],
+        validators: [],
+        toValidate: [],
+        validEntries: {},
+        invalidEntries: {},
+      }
+    }
+  }
+}
+
+const app: LiquidTraceApp = new LiquidTraceApp(liquidTraceInitialState)
 
 console.log(app.entities.todos.actions.getAll())
 console.log(app.entities.users.actions.getAll())
