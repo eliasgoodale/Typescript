@@ -1,7 +1,8 @@
 import { httpActionGroup } from './allActions'
 import { createAction as defaultActionCreator } from 'typesafe-actions'
 type ReduxAppEntity = any;
-type ReduxAppInitialState = any;
+type ReduxAppStartupState = any;
+type ReduxAppLiveState = any;
 type ReduxAppEntities = any;
 
 interface IVisualComponentInitialState {
@@ -21,18 +22,18 @@ interface EntityIdentifier {
 
 
 interface StateContainer {
-  createAppEntities(initialState: any): ReduxAppEntities
+  createAppEntities(initialState: ReduxAppStartupState | ReduxAppLiveState): ReduxAppEntities
 }
 /* Set up default ReduxApp behavior (routes for logging/serializing state etc) */
 abstract class ReduxApp implements StateContainer {
-  private _initializedFrom: ReduxAppInitialState
+  private _initializedFrom: ReduxAppStartupState
   public entities: ReduxAppEntities;
 
-  constructor (initialState: ReduxAppInitialState) {
+  constructor (initialState: ReduxAppStartupState | ReduxAppLiveState) {
     this._initializedFrom = initialState;
   }
 
-  abstract createAppEntities(initialState: any): ReduxAppEntities
+  abstract createAppEntities(initialState: ReduxAppStartupState): ReduxAppEntities
 }
 
 class LiquidTraceActionGroup {
@@ -73,16 +74,17 @@ class LiquidTraceEntity {
       */
 
       this.validation = this.setupValidation(validation)
-      this.collection = this.setupCollection(collection) //set up collection
+      this.collection = this.setupCollection(collection)
     }
 
     processIdentifiers({id, key, title}){
       /* 
-        Process identifiers and make optional changes to meta data that effects the entire entity.
-        Here, you can manipulate the instantiation process
+        Process identifiers and make optional changes to meta data
+        that affect the entity's instantiation.
+       
       */
-      const identifiers: any = {id: id, key: key, title: title}
-      return identifiers;
+      const identifier: EntityIdentifier = {id: id, key: key, title: title}
+      return identifier;
     }
 
     createReactComponent(initialState: IVisualComponentInitialState) {
@@ -120,7 +122,7 @@ class LiquidTraceEntity {
 class LiquidTraceApp extends ReduxApp {
     public entities: any;
 
-    public constructor(initialState: ReduxAppInitialState) {
+    public constructor(initialState: ReduxAppStartupState | ReduxAppLiveState) {
         super(initialState);
         this.entities = this.createAppEntities(initialState);
     }
@@ -141,7 +143,7 @@ const entityActions = {
     users: httpActionGroup,
 }
 
-const liquidTraceInitialState: ReduxAppInitialState = {
+const liquidTraceInitialState: ReduxAppStartupState = {
 
   entities:{
     index: ['todos'],
